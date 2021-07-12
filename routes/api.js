@@ -121,11 +121,12 @@ module.exports = function (app) {
           }
         },
         { new: true },
-        (err, done) => {
+        (err, board) => {
           if (err) return console.log(err)
-          res.send("Success")
+          let post = board.posts.findIndex(post=>{return post._id == threadId})
+          if(post != -1) return res.send("incorrect password")
+          res.send("success")
         }
-
       )
     })
 
@@ -145,7 +146,10 @@ module.exports = function (app) {
         (err, board) => {
           if (err) return console.log(err)
           if (!board) return console.log("no board")
-          let e = board.posts[0]
+          let posts = board.posts
+          let idx = posts.findIndex((elm)=>elm._id == req.query.thread_id)
+          let e = board.posts[idx]
+
           let aaaa = {
             _id: e._id,
             text: e.text,
@@ -165,7 +169,7 @@ module.exports = function (app) {
 
     })
     .post((req, res) => {
-      console.log(req.body)
+      console.log("post reply")
       // board, thread_id, text, delete_password
       const boardName = req.params.board
       const threadId = req.body.thread_id
@@ -193,16 +197,59 @@ module.exports = function (app) {
         (err, done) => {
           if (err) return console.log(err)
           console.log(done)
+          res.redirect('/b/' + boardName + '/' + threadId)
         }
       )
     })
     .put((req, res) => {
-      console.log(req.body)
+      console.log("put reply")
       // board, thread_id, reply_id
+      let boardName = req.params.board
+      let threadId = req.body.thread_id
+      let replyId = req.body.reply_id
+
+      Board.findOne(
+        {
+          "name": boardName,
+        },
+        (err,board)=>{
+          if(err) return console.log(err)
+          if(!board) return console.log("no board")
+          let thread = board.posts.filter((post)=>{return post._id == threadId})[0]
+          if(!thread) return console.log("no thread")
+          let reply = thread.replies.filter((reply)=>{return reply._id == replyId})[0]
+          reply.reported = true;
+          board.save()
+          console.log(reply)
+          res.send("Reported")
+        }
+      )
     })
     .delete((req, res) => {
-      console.log(req.body)
+      console.log("delete reply")
       // board, thread_id, reply_id, delete_password
+      let boardName = req.params.board
+      let threadId = req.body.thread_id
+      let replyId = req.body.reply_id
+      let pw = req.body.delete_password
+
+      Board.findOne(
+        {
+          "name": boardName
+        },
+        (err,board)=>{
+          if(err) return console.log(err)
+          if(!board) return console.log("no board")
+          let post = board.posts.filter(post=>{return post._id == threadId})[0]
+          if(!post) return console.log("no post")
+          let fidx = post.replies.findIndex(reply=>{return reply._id == replyId && reply.delete_password == pw})
+          if(fidx == -1) return console.log("no reply/ wrong pw")
+          post.replies.splice(fidx,1)
+          board.save()
+          res.redirect('/b/' + boardName + '/' + threadId)
+        }
+      )
+
     })
 
 };
