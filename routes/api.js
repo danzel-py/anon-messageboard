@@ -35,43 +35,101 @@ module.exports = function (app) {
   app.route('/api/threads/:board')
     .get((req, res) => {
       const boardName = req.params.board
-      console.log("Get board")
-      Board.findOne({name: boardName},(err,board)=>{
+      console.log("Get board "+req.params.board)
+      Board.findOne({ name: boardName }, 'posts', (err, board) => {
         if (err) return console.log("Error: Get Board")
-        res.send(board.posts)
+        if (!board) return res.send([])
+        let arr = board.posts
+        arr.sort((a, b) => {
+          // Sort by newest
+          return ( b.created_on - a.created_on)
+        })
+
+        let b = arr.slice(0,10).map((e)=>{
+          return {
+            "_id": e._id,
+            "text": e.text,
+            "created_on": e.created_on,
+            "bumped_on": e.bumped_on,
+            "replies": e.replies,
+            "reply_count": e.replies.length
+          }
+        })
+        res.send(b)
       })
-      
+
 
     })
     .post((req, res) => {
       const boardName = req.params.board
-      
-      const newBoard = new Board({name: boardName, posts: []})
-      console.log("Create Board: " + newBoard.name)
-
-      // * find or create Board
+      console.log("Post board:"+ boardName+ " "+req.body.text)
       Board.findOneAndUpdate(
         { name: boardName },
-        newBoard,
-        { upsert: true, new: true},
-        (err,board)=>{
-          if(err) return console.log("Error: Post Board")
-          
+        { $set: { name: boardName } },
+        { upsert: true , new: true},
+        // ^ find or create Board
+        (err, board) => {
+          if (err) return res.send(err)
+          board.posts.push(new Thread({
+            text: req.body.text,
+            delete_password: req.body.delete_password,
+            replies: []
+          }))
+          board.save()
+          res.redirect('/b/'+req.params.board+'/')
         }
       )
     })
 
     .put((req, res) => {
-      console.log("Put board")
-      console.log(req.body)
-      // board, thread_id
+      console.log("Put board (report)")
+      const idReport = req.body.report_id
+      const boardName = req.params.board
+      Board.findOneAndUpdate(
+        {
+          "name": boardName,
+          "posts._id": idReport
+        },
+        {"$set":{
+          "posts.$.reported": true
+        }},{new : true},
+        (err,done)=>{
+          if(err) return console.log(err)
+          res.send("Reported")
+        }
+      )
     })
     .delete((req, res) => {
       console.log("Del board")
       console.log(req.body)
       // board, thread_id, delete_password
+      const boardName = req.params.board
+      const threadId = req.body.thread_id
+      const pw = req.body.delete_password
+
+      Board.findOneAndUpdate(
+        {
+          "name": boardName,
+        },
+        {
+          "$pull": {
+            "posts":{
+              "_id": threadId,
+              "delete_password": pw
+            }
+          }
+        },
+        { new : true},
+        (err,done)=>{
+          if(err) return console.log(err)
+          res.send("Success")
+        }
+
+      )
     })
 
+
+    // * REPLIES
   app.route('/api/replies/:board')
     .get((req, res) => {
       console.log(req.body)
