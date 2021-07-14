@@ -15,7 +15,7 @@ const app = express();
 app.use(helmet.dnsPrefetchControl());
 app.use(helmet.frameguard());
 app.use(helmet.referrerPolicy({
-  policy: "strict-origin-when-cross-origin"
+  policy: "same-origin"
 }))
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -33,7 +33,8 @@ app.route('/')
 
 //*Connect to Database
 
-const url = process.env.DB||'mongodb://127.0.0.1:27017/AMB'
+// const url = process.env.DB||'mongodb://127.0.0.1:27017/AMB'
+const url = process.env.DB
 mongoose.connect(url, {useNewUrlParser: true, useUnifiedTopology: true});
 
 const db = mongoose.connection;
