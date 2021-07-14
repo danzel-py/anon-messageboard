@@ -31,7 +31,7 @@ app.route('/')
     res.sendFile(process.cwd() + '/views/index.html');
   });
 
-//*Connect to Database
+// * Connect to Database
 
 // const url = process.env.DB||'mongodb://127.0.0.1:27017/AMB'
 const url = process.env.DB

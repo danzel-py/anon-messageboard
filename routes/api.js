@@ -123,7 +123,7 @@ module.exports = function (app) {
         { new: true },
         (err, board) => {
           if (err) return console.log(err)
-          let post = board.posts.findIndex(post=>{return post._id == threadId})
+          let post = board.posts.findIndex(post=>{return post._id == threadId && post.delete_password == pw})
           if(post != -1) return res.send("incorrect password")
           res.send("success")
         }
