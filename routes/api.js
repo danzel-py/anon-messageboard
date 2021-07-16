@@ -96,13 +96,13 @@ module.exports = function (app) {
         }, { new: true },
         (err, done) => {
           if (err) return console.log(err)
+          if (!done) return res.send("Not found")
           res.send("Reported")
         }
       )
     })
     .delete((req, res) => {
       console.log("Del board")
-      console.log(req.body)
       // board, thread_id, delete_password
       const boardName = req.params.board
       const threadId = req.body.thread_id
@@ -123,8 +123,8 @@ module.exports = function (app) {
         { new: true },
         (err, board) => {
           if (err) return console.log(err)
-          let post = board.posts.findIndex(post=>{return post._id == threadId && post.delete_password == pw})
-          if(post != -1) return res.send("incorrect password")
+          let ix = board.posts.findIndex(post=>post._id.toString() == threadId)
+          if(ix != -1) return res.send("incorrect password")
           res.send("success")
         }
       )
@@ -214,10 +214,11 @@ module.exports = function (app) {
         },
         (err,board)=>{
           if(err) return console.log(err)
-          if(!board) return console.log("no board")
+          if(!board) return res.send("no board")
           let thread = board.posts.filter((post)=>{return post._id == threadId})[0]
-          if(!thread) return console.log("no thread")
-          let reply = thread.replies.filter((reply)=>{return reply._id == replyId})[0]
+          if(!thread) return res.send("no thread")
+          let reply = thread.replies.filter((reply)=>{return reply._id == replyId})
+          if(!reply) return res.send("no reply")
           reply.reported = true;
           board.save()
           console.log(reply)
@@ -242,8 +243,8 @@ module.exports = function (app) {
           if(!board) return console.log("no board")
           let post = board.posts.filter(post=>{return post._id == threadId})[0]
           if(!post) return console.log("no post")
-          let fidx = post.replies.findIndex(reply=>{return reply._id == replyId && reply.delete_password == pw})
-          if(fidx == -1) return console.log("no reply/ wrong pw")
+          let fidx = post.replies.findIndex(reply=> reply._id == replyId && reply.delete_password == pw)
+          if(fidx == -1) return res.send("no reply/ wrong pw")
           post.replies.splice(fidx,1)
           board.save()
           res.redirect('/b/' + boardName + '/' + threadId)
